@@ -84,7 +84,7 @@ Sign in at [sliplane.io](https://sliplane.io) (GitHub login), create a **Project
 
 ### 3. Deploy this repo (public service)
 
-1. **Create Service** → **Deploy from GitHub** → select `markchrc2025/My-Better-Auth` and your default branch. Sliplane detects the `Dockerfile` automatically and picks up the exposed port (3000).
+1. **Create Service** → **Deploy from GitHub** → select `markchrc2025/My-Better-Auth`, branch `main`, context directory `/`. Sliplane detects the `Dockerfile` automatically and picks up the exposed port (3000).
 2. Environment variables:
 
    | Variable | Value |
