@@ -3,6 +3,7 @@ import {
   oauthProviderOpenIdConfigMetadata,
 } from "@better-auth/oauth-provider";
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { adminApi } from "./admin/api.js";
@@ -58,25 +59,18 @@ app.get("/health/db", async (c) => {
   }
 });
 
-app.get("/", (c) =>
-  c.json({
-    service: "my-better-auth",
-    status: "ok",
-    endpoints: {
-      auth: "/api/auth/*",
-      oidcDiscovery: "/.well-known/openid-configuration",
-      adminApi: "/admin/api/*",
-      health: "/health",
-    },
-  }),
-);
-
 // Platform admin API (dashboard backend) — session + admin role required.
 app.route("/admin/api", adminApi);
 
 // All Better Auth endpoints: sign-in, sessions, OAuth2/OIDC provider
 // (authorize, token, userinfo, ...), admin plugin, JWKS.
 app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+
+// Dashboard SPA (built into ./public). Registered last so API routes above
+// take precedence. serveStatic falls through on a missing file, so the second
+// handler serves index.html for client-side routes (/apps, /users, ...).
+app.use("*", serveStatic({ root: "./public" }));
+app.get("*", serveStatic({ path: "./public/index.html" }));
 
 async function main() {
   if (env.autoMigrate) {

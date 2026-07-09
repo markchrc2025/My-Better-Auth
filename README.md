@@ -4,14 +4,17 @@ A personal **authentication platform**: a standalone [Better Auth](https://bette
 
 ```
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│ app.example.com │   │admin.example.com│   │  www.example.com│   ... your apps
+│    App A        │   │    App B        │   │    App C        │   ... your apps
+│ (any domain)    │   │ (any domain)    │   │ (any domain)    │
 └────────┬────────┘   └────────┬────────┘   └────────┬────────┘
-         │      createAuthClient({ baseURL })        │
-         └────────────────────┬───────────────────── ┘
+         │   OAuth 2.1 / OIDC (auth code + PKCE)      │
+         │   client_id / client_secret per app       │
+         └────────────────────┬──────────────────────┘
                               ▼
                 ┌───────────────────────────┐
                 │   auth.example.com        │   this repo, deployed as a
-                │   (Better Auth + Hono)    │   Sliplane service (public)
+                │   OIDC provider + Hono    │   single Sliplane service:
+                │   + admin dashboard (SPA) │   API + dashboard, one origin
                 └─────────────┬─────────────┘
                               │  DATABASE_URL → <postgres>.internal:5432
                               ▼
@@ -20,6 +23,10 @@ A personal **authentication platform**: a standalone [Better Auth](https://bette
                 │   volume-backed           │   Docker image + volume)
                 └───────────────────────────┘
 ```
+
+You administer everything from the built-in **dashboard** (served at the root
+of the auth server): create users, and connect apps to get their OAuth
+credentials and copy-paste setup snippets — no terminal needed.
 
 ## How this repo maps to the Better Auth installation guide
 
@@ -32,7 +39,7 @@ A personal **authentication platform**: a standalone [Better Auth](https://bette
 | 5. Create database tables | Automatic on boot (`src/migrate.ts`), or `npm run migrate` / `npm run auth:migrate` |
 | 6. Authentication methods | Email & password enabled; GitHub/Google auto-enable when their env vars are set |
 | 7. Mount handler | `src/index.ts` — Hono serves `/api/auth/*` (+ CORS + health checks) |
-| 8. Create client instance | Done **in each consuming app** — see [Using it from your apps](#using-it-from-your-apps) |
+| 8. Create client instance | Each app connects over **OIDC** with generated credentials — see [Connecting your apps](#connecting-your-apps) |
 
 ### Endpoints
 
@@ -46,23 +53,46 @@ A personal **authentication platform**: a standalone [Better Auth](https://bette
 | `/admin/api/*` | Platform admin API (stats, config, app registry) — admin session required |
 | `/health` | Shallow health check — configure this as the Sliplane health check route |
 | `/health/db` | Deep health check (verifies database connectivity) |
-| `/` | Service info |
+| `/` · `/apps` · `/users` · `/settings` | Admin dashboard (React SPA) |
+
+## The admin dashboard
+
+The dashboard (`web/`, a React + Vite SPA) is built into the server image and
+served from the root path — locked to accounts in `ADMIN_EMAILS`. From it you can:
+
+- **Overview** — user/app/session counts, issuer + discovery URLs, DB health.
+- **Applications** — connect an app (web, SPA, or native), which generates its
+  `client_id`/`client_secret` and shows ready-to-paste endpoint URLs, an env-var
+  block, and framework snippets (Next.js/Auth.js, Node `openid-client`, browser
+  PKCE). Edit redirect URIs, disable, delete, or rotate the secret later.
+- **Users** — create users (the "invite"), search, set roles, ban/unban, reset
+  passwords, and list/revoke sessions.
+- **Settings** — read-only view of issuer, sign-up mode, cookie domain, and which
+  social providers are active.
 
 ## Local development
 
 ```bash
-cp .env.example .env          # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+cp .env.example .env          # set BETTER_AUTH_SECRET (openssl rand -base64 32)
+                              # and ADMIN_EMAILS + ADMIN_INITIAL_PASSWORD
 docker compose up db -d       # PostgreSQL 17 on localhost:5432
 npm install
-npm run dev                   # http://localhost:3000, migrations run on boot
+npm run dev                   # auth server + API on http://localhost:3000
+
+# In a second terminal, the dashboard dev server (proxies /api to :3000):
+cd web && npm install && npm run dev   # http://localhost:5173
 ```
 
-Or run the full stack exactly like production: `docker compose up --build`.
+Or run the full stack exactly like production (dashboard built into the image):
+`docker compose up --build`, then open http://localhost:3000 and sign in with
+`ADMIN_EMAILS` / `ADMIN_INITIAL_PASSWORD`.
 
-Quick smoke test:
+Quick API smoke test:
 
 ```bash
 curl http://localhost:3000/health
+curl http://localhost:3000/.well-known/openid-configuration
+# Public sign-up is disabled (invite-only) — this returns a 4xx by design:
 curl -X POST http://localhost:3000/api/auth/sign-up/email \
   -H "Content-Type: application/json" \
   -d '{"name":"Test","email":"test@example.com","password":"SuperSecret123!"}'
@@ -97,22 +127,23 @@ Sign in at [sliplane.io](https://sliplane.io) (GitHub login), create a **Project
    | `BETTER_AUTH_SECRET` | output of `openssl rand -base64 32` (mark as secret) |
    | `BETTER_AUTH_URL` | `https://<your-service-name>.sliplane.app` for now |
    | `DATABASE_URL` | `postgres://better_auth:<password>@<postgres-internal-host>:5432/better_auth` |
-   | `TRUSTED_ORIGINS` | comma-separated origins of your apps, e.g. `https://app.example.com,https://admin.example.com` |
+   | `ADMIN_EMAILS` | your email(s), comma-separated — grants dashboard access |
+   | `ADMIN_INITIAL_PASSWORD` | a strong password (mark as secret) — creates your admin account on first boot |
 
 3. Set the **health check path** to `/health`. Sliplane only routes traffic to a new deploy after this returns 2xx, and keeps monitoring it every minute.
 4. Leave **Autodeploy** enabled — every push to the branch redeploys automatically.
-5. Deploy. On boot the server connects to Postgres and creates the Better Auth schema (`user`, `session`, `account`, `verification`) automatically — no manual migration step.
+5. Deploy. On boot the server connects to Postgres, creates the full schema (core + OIDC + JWKS tables) automatically, and creates your admin account.
 
-Verify: `https://<your-service-name>.sliplane.app/health` → `{"status":"ok"}` and `/health/db` → `{"status":"ok","database":"ok"}`.
+Verify: open `https://<your-service-name>.sliplane.app/` → sign in with `ADMIN_EMAILS` / `ADMIN_INITIAL_PASSWORD`, then **change your password** (Users → your account) and remove `ADMIN_INITIAL_PASSWORD` from the env vars.
 
-### 4. Add a custom domain (strongly recommended for multi-app auth)
+> `TRUSTED_ORIGINS` is optional here: the origins of each connected app's redirect URIs are trusted automatically. Set it only for extra origins that aren't OAuth clients.
 
-To share sessions across your apps, the auth server should live on a subdomain of the same root domain as the apps (e.g. `auth.example.com` next to `app.example.com`):
+### 4. Add a custom domain (recommended)
+
+A stable custom domain keeps your OIDC issuer URL constant (apps pin it), and gives you a memorable dashboard URL:
 
 1. In the service **Settings → Domain → Connect Domain**, add `auth.example.com` and create the CNAME record it shows you. SSL is provisioned automatically via Let's Encrypt.
-2. Update env vars: `BETTER_AUTH_URL=https://auth.example.com` and `COOKIE_DOMAIN=.example.com`, then redeploy.
-
-With `COOKIE_DOMAIN` set, the session cookie is issued for the whole root domain, so every `*.example.com` app shares the same login session.
+2. Update `BETTER_AUTH_URL=https://auth.example.com` and redeploy. (Since apps connect over OIDC, they work across any domain — no shared-cookie configuration needed. If you *also* want browser-cookie SSO across subdomains of one root domain, additionally set `COOKIE_DOMAIN=.example.com`.)
 
 ### 5. Configure social providers (optional)
 
@@ -123,39 +154,51 @@ Create OAuth apps and set the callback URL to `https://auth.example.com/api/auth
 
 Providers activate automatically when both values are present. Add more in `src/lib/auth.ts`.
 
-## Using it from your apps
+## Connecting your apps
 
-Install the client in each app (`npm install better-auth`), then create a client pointing at this server. Because your apps run on different origins than the auth server, cookies must be sent with `credentials: "include"`:
+Each app connects as a standard **OIDC client**. You don't hand-edit anything on
+the server — you register the app in the dashboard and paste the generated values.
+
+1. In the dashboard → **Applications** → **Connect an app**. Give it a name, add
+   its redirect URI (e.g. `https://app.example.com/api/auth/callback/my-better-auth`),
+   and pick a type:
+   - **Web app** (has a backend) → gets a `client_id` **and** `client_secret`.
+   - **SPA / Native** → public client, `client_id` only (PKCE, no secret).
+2. Copy the credentials and the connection details shown (the secret is displayed
+   **once**). The modal includes copy-paste snippets for Next.js/Auth.js, Node
+   `openid-client`, and browser PKCE.
+3. Point your app's OIDC/auth library at the **issuer** (`https://auth.example.com`)
+   — its discovery document at `/.well-known/openid-configuration` advertises every
+   endpoint automatically.
+
+Minimal example (Auth.js / NextAuth v5):
 
 ```ts
-// lib/auth-client.ts (React app — use better-auth/vue, /svelte, /solid, or /client for others)
-import { createAuthClient } from "better-auth/react";
+// auth.ts
+import NextAuth from "next-auth";
 
-export const authClient = createAuthClient({
-  baseURL: "https://auth.example.com", // this auth server
-  fetchOptions: { credentials: "include" },
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    {
+      id: "my-better-auth",
+      name: "My Better Auth",
+      type: "oidc",
+      issuer: "https://auth.example.com",
+      clientId: process.env.OIDC_CLIENT_ID!,
+      clientSecret: process.env.OIDC_CLIENT_SECRET!, // omit for public SPA/native clients
+    },
+  ],
 });
 ```
 
-```ts
-// Sign up / sign in / session anywhere in the app
-await authClient.signUp.email({ name, email, password });
-await authClient.signIn.email({ email, password });
-const { data: session } = authClient.useSession(); // React hook
-```
+Because this is real OIDC (authorization code + PKCE, RS256-signed tokens
+verifiable via the JWKS endpoint), your apps can live on **any domain** — no
+shared-cookie or same-origin requirement.
 
-Server-side (e.g. an API or SSR backend of one of your apps) — validate the session by forwarding the cookie:
-
-```ts
-const res = await fetch("https://auth.example.com/api/auth/get-session", {
-  headers: { cookie: request.headers.get("cookie") ?? "" },
-});
-const session = await res.json(); // null when not signed in
-```
-
-Every app origin must be listed in `TRUSTED_ORIGINS`, otherwise CORS and Better Auth will reject its requests.
-
-> **Apps on completely different root domains?** Browsers block third-party cookies, so shared cookie sessions only work across subdomains of one root domain. For separate domains, add the [Bearer plugin](https://better-auth.com/docs/plugins/bearer) (token in `Authorization` header) or turn this server into a full [OIDC provider](https://better-auth.com/docs/plugins/oidc-provider). For mobile, see the [Expo plugin](https://better-auth.com/docs/integrations/expo).
+> Users sign in on this server's hosted **login page** (and a **consent** screen,
+> unless you enabled "skip consent" for a first-party app), then get redirected
+> back to your app with an authorization code. Since the platform is invite-only,
+> create each user in the dashboard first.
 
 ## Environment variables
 
@@ -166,8 +209,8 @@ Every app origin must be listed in `TRUSTED_ORIGINS`, otherwise CORS and Better 
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `ADMIN_EMAILS` | ✅ | Comma-separated emails of platform administrators (dashboard access) |
 | `ADMIN_INITIAL_PASSWORD` | first boot | Creates the first admin account if it doesn't exist; change the password after first login, then remove |
-| `TRUSTED_ORIGINS` | for multi-app | Comma-separated origins allowed to use this server (CORS + trustedOrigins) |
-| `COOKIE_DOMAIN` | recommended | e.g. `.example.com` — share the session cookie across all subdomains |
+| `TRUSTED_ORIGINS` | optional | Extra allowed origins (CORS + trustedOrigins). Connected apps' redirect-URI origins are trusted automatically. |
+| `COOKIE_DOMAIN` | optional | e.g. `.example.com` — share the browser session cookie across subdomains (not needed for OIDC) |
 | `AUTO_MIGRATE` | – | `false` to skip schema migration on boot (default `true`) |
 | `PORT` | – | Listen port (default `3000`) |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | – | Enable GitHub sign-in |
@@ -175,6 +218,7 @@ Every app origin must be listed in `TRUSTED_ORIGINS`, otherwise CORS and Better 
 
 ## Operations
 
+- **Dashboard build**: the SPA in `web/` is compiled into the server image (`web-build` stage in the `Dockerfile`) and served from `./public`. Rebuild locally with `cd web && npm run build`.
 - **Schema changes** (new plugins, etc.): migrations run automatically on the next deploy. Manually: `npm run migrate` (programmatic) or `npm run auth:migrate` (Better Auth CLI).
 - **Rotate the secret**: switch to `BETTER_AUTH_SECRETS` (plural) to roll over without invalidating existing data — see the [secrets option](https://better-auth.com/docs/reference/options#secrets).
 - **Add auth methods**: edit `src/lib/auth.ts` (e.g. [passkey](https://better-auth.com/docs/plugins/passkey), [magic link](https://better-auth.com/docs/plugins/magic-link), [username](https://better-auth.com/docs/plugins/username)) and push — Sliplane redeploys and migrations apply on boot.

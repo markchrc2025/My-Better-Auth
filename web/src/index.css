@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg text-slate-200 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-brand-fg hover:bg-brand-hover;
+  }
+  .btn-secondary {
+    @apply btn border border-border bg-elevated text-slate-200 hover:bg-border;
+  }
+  .btn-danger {
+    @apply btn border border-red-900/60 bg-red-950/40 text-red-300 hover:bg-red-950/70;
+  }
+  .btn-ghost {
+    @apply btn text-muted hover:bg-elevated hover:text-slate-200;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-slate-100 placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-300;
+  }
+  .hint {
+    @apply mt-1 text-xs text-muted;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-panel;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .badge-green {
+    @apply badge bg-brand/15 text-brand;
+  }
+  .badge-gray {
+    @apply badge bg-elevated text-muted;
+  }
+  .badge-red {
+    @apply badge bg-red-950/50 text-red-300;
+  }
+
+  .code {
+    @apply rounded bg-bg px-1.5 py-0.5 font-mono text-[0.8125rem] text-brand;
+  }
+}
