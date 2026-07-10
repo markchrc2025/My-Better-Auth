@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { OAuthErrorNotice } from "../components/OAuthErrorNotice.tsx";
 import { authClient } from "../lib/auth-client.ts";
 
 /**
@@ -53,6 +54,7 @@ export function LoginPage() {
               : "Sign in to the admin dashboard"}
           </p>
         </div>
+        <OAuthErrorNotice />
         <form className="card space-y-4 p-6" onSubmit={onSubmit}>
           <div>
             <label className="label" htmlFor="email">

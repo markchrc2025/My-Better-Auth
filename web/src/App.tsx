@@ -38,7 +38,14 @@ function RequireAdmin({ children }: { children: ReactNode }) {
     );
   }
   if (!session) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    // Preserve the query string so OAuth error params surface on the login page.
+    return (
+      <Navigate
+        to={{ pathname: "/login", search: window.location.search }}
+        replace
+        state={{ from: location }}
+      />
+    );
   }
   if (!isAdmin(session.user)) {
     return (

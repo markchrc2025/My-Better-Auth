@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "../components/Layout.tsx";
+import { OAuthErrorNotice } from "../components/OAuthErrorNotice.tsx";
 import { CopyField, Spinner } from "../components/ui.tsx";
 import { api, type AppStats, type PlatformConfig } from "../lib/api.ts";
 
@@ -33,6 +34,7 @@ export function OverviewPage() {
 
   return (
     <>
+      <OAuthErrorNotice />
       <PageHeader
         title="Overview"
         description="Your authentication platform at a glance."
