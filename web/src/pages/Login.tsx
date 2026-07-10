@@ -76,6 +76,11 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [providers, setProviders] = useState<ProviderId[]>([]);
 
+  // Second-factor challenge shown after a correct password when 2FA is on.
+  const [stage, setStage] = useState<"credentials" | "twofactor">("credentials");
+  const [code, setCode] = useState("");
+  const [useBackup, setUseBackup] = useState(false);
+
   const search = window.location.search;
   const params = new URLSearchParams(search);
   const isOidcFlow = params.has("client_id") && params.has("redirect_uri");
@@ -85,6 +90,14 @@ export function LoginPage() {
   // invisible to the connecting app.
   const callbackURL = isOidcFlow ? `/api/auth/oauth2/authorize${search}` : "/";
   const errorCallbackURL = isOidcFlow ? `/login${search}` : "/login";
+
+  // Full-page navigation so the browser follows the server's redirect (OIDC)
+  // or loads the dashboard with the session already established.
+  const proceed = () => {
+    window.location.href = isOidcFlow
+      ? `/api/auth/oauth2/authorize${search}`
+      : "/";
+  };
 
   useEffect(() => {
     let active = true;
@@ -107,21 +120,34 @@ export function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { error } = await authClient.signIn.email({ email, password });
+    const { data, error } = await authClient.signIn.email({ email, password });
     if (error) {
       setError(error.message ?? "Sign in failed");
       setBusy(false);
       return;
     }
-    if (isOidcFlow) {
-      // Resume the OAuth flow — full-page navigation so the browser follows
-      // the server's redirect back to the requesting app.
-      window.location.href = `/api/auth/oauth2/authorize${search}`;
+    // 2FA-enabled accounts don't get a session yet — verify the second factor.
+    if ((data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+      setStage("twofactor");
+      setBusy(false);
       return;
     }
-    // Hard navigation so the dashboard loads with the session already
-    // established (avoids a race with the client session store).
-    window.location.href = "/";
+    proceed();
+  };
+
+  const onVerify2fa = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { error } = useBackup
+      ? await authClient.twoFactor.verifyBackupCode({ code })
+      : await authClient.twoFactor.verifyTotp({ code });
+    if (error) {
+      setError(error.message ?? "That code didn't match.");
+      setBusy(false);
+      return;
+    }
+    proceed();
   };
 
   const onSocial = async (provider: ProviderId) => {
@@ -140,6 +166,21 @@ export function LoginPage() {
     }
   };
 
+  const onPasskey = async () => {
+    setBusy(true);
+    setError(null);
+    const { error } = await authClient.signIn.passkey();
+    if (error) {
+      // A dismissed system prompt isn't a real error worth showing.
+      if (!/cancel|abort/i.test(error.message ?? "")) {
+        setError(error.message ?? "Passkey sign-in failed.");
+      }
+      setBusy(false);
+      return;
+    }
+    proceed();
+  };
+
   return (
     <div className="flex min-h-full items-center justify-center p-4">
       <div className="w-full max-w-sm">
@@ -147,81 +188,142 @@ export function LoginPage() {
           <div className="text-3xl">🔐</div>
           <h1 className="mt-2 text-xl font-semibold text-slate-100">Authenticize</h1>
           <p className="mt-1 text-sm text-muted">
-            {isOidcFlow
-              ? `Sign in to continue to ${params.get("client_id")}`
-              : "Sign in to the admin dashboard"}
+            {stage === "twofactor"
+              ? "Enter your second factor"
+              : isOidcFlow
+                ? `Sign in to continue to ${params.get("client_id")}`
+                : "Sign in to the admin dashboard"}
           </p>
         </div>
         <OAuthErrorNotice />
-        <div className="card space-y-4 p-6">
-          {providers.length > 0 && (
-            <>
-              <div className="space-y-2">
-                {providers.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className="btn-secondary w-full"
-                    disabled={busy}
-                    onClick={() => onSocial(p)}
-                  >
-                    {PROVIDER_META[p]?.icon}
-                    {PROVIDER_META[p]?.label ?? `Continue with ${p}`}
-                  </button>
-                ))}
+
+        {stage === "twofactor" ? (
+          <div className="card p-6">
+            <form className="space-y-4" onSubmit={onVerify2fa}>
+              <p className="text-sm text-muted">
+                {useBackup
+                  ? "Enter one of your saved backup codes."
+                  : "Enter the 6-digit code from your authenticator app."}
+              </p>
+              <div>
+                <label className="label" htmlFor="otp">
+                  {useBackup ? "Backup code" : "Authentication code"}
+                </label>
+                <input
+                  id="otp"
+                  inputMode={useBackup ? "text" : "numeric"}
+                  autoComplete="one-time-code"
+                  className="input tracking-widest"
+                  value={code}
+                  onChange={(e) =>
+                    setCode(
+                      useBackup
+                        ? e.target.value.trim()
+                        : e.target.value.replace(/\D/g, "").slice(0, 6),
+                    )
+                  }
+                  placeholder={useBackup ? "xxxxxxxxxx" : "123456"}
+                  required
+                  autoFocus
+                />
               </div>
-              <div className="flex items-center gap-3">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted">or</span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-            </>
-          )}
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <div>
-              <label className="label" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="username"
-                className="input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoFocus
-              />
+              {error && (
+                <div className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+              <button className="btn-primary w-full" type="submit" disabled={busy}>
+                {busy ? "Verifying…" : "Verify"}
+              </button>
+              <button
+                type="button"
+                className="w-full text-center text-xs text-muted hover:text-slate-200"
+                onClick={() => {
+                  setUseBackup((v) => !v);
+                  setCode("");
+                  setError(null);
+                }}
+              >
+                {useBackup ? "Use your authenticator app instead" : "Use a backup code"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="card space-y-4 p-6">
+            <div className="space-y-2">
+              {providers.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className="btn-secondary w-full"
+                  disabled={busy}
+                  onClick={() => onSocial(p)}
+                >
+                  {PROVIDER_META[p]?.icon}
+                  {PROVIDER_META[p]?.label ?? `Continue with ${p}`}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="btn-secondary w-full"
+                disabled={busy}
+                onClick={onPasskey}
+              >
+                <span aria-hidden="true">🔑</span>
+                Sign in with a passkey
+              </button>
             </div>
-            <div>
-              <label className="label" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                className="input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted">or</span>
+              <span className="h-px flex-1 bg-border" />
             </div>
-            {error && (
-              <div className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-300">
-                {error}
+            <form className="space-y-4" onSubmit={onSubmit}>
+              <div>
+                <label className="label" htmlFor="email">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="username"
+                  className="input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                />
               </div>
-            )}
-            <button className="btn-primary w-full" type="submit" disabled={busy}>
-              {busy ? "Signing in…" : "Sign in"}
-            </button>
-            <p className="text-center text-xs">
-              <a href="/forgot-password" className="text-muted hover:text-slate-200">
-                Forgot password?
-              </a>
-            </p>
-          </form>
-        </div>
+              <div>
+                <label className="label" htmlFor="password">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  className="input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {error && (
+                <div className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+              <button className="btn-primary w-full" type="submit" disabled={busy}>
+                {busy ? "Signing in…" : "Sign in"}
+              </button>
+              <p className="text-center text-xs">
+                <a href="/forgot-password" className="text-muted hover:text-slate-200">
+                  Forgot password?
+                </a>
+              </p>
+            </form>
+          </div>
+        )}
         <p className="mt-4 text-center text-xs text-muted">
           This is a private, invite-only platform.
         </p>

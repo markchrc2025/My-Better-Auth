@@ -92,4 +92,9 @@ export const env = {
   // app account on first sign-in.
   socialAllowSignup:
     (process.env.SOCIAL_ALLOW_SIGNUP ?? "").toLowerCase() === "true",
+
+  // WebAuthn / passkeys relying-party id. Defaults to the auth server's own
+  // hostname (derived from BETTER_AUTH_URL). Override to a parent domain — e.g.
+  // "example.com" — to let passkeys work across its subdomains.
+  passkeyRpId: process.env.PASSKEY_RP_ID || undefined,
 };

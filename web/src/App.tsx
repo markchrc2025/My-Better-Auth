@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPassword.tsx";
 import { LoginPage } from "./pages/Login.tsx";
 import { OverviewPage } from "./pages/Overview.tsx";
 import { ResetPasswordPage } from "./pages/ResetPassword.tsx";
+import { SecurityPage } from "./pages/Security.tsx";
 import { SettingsPage } from "./pages/Settings.tsx";
 import { UsersPage } from "./pages/Users.tsx";
 
@@ -78,6 +79,7 @@ export function App() {
           element={<RequireAdmin><AppDetailPage /></RequireAdmin>}
         />
         <Route path="/users" element={<RequireAdmin><UsersPage /></RequireAdmin>} />
+        <Route path="/security" element={<RequireAdmin><SecurityPage /></RequireAdmin>} />
         <Route path="/settings" element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

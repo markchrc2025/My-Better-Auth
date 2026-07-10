@@ -1,7 +1,8 @@
 import { oauthProvider } from "@better-auth/oauth-provider";
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
-import { admin, jwt } from "better-auth/plugins";
+import { admin, jwt, twoFactor } from "better-auth/plugins";
 import { pool } from "../db.js";
 import { sendEmail } from "../email/index.js";
 import { resetPasswordEmail, verificationEmail } from "../email/templates.js";
@@ -118,6 +119,22 @@ export const auth = betterAuth({
     // User management for the dashboard: create users, ban, set roles and
     // passwords, list and revoke sessions.
     admin(),
+
+    // Second factor for password logins: TOTP (Google/Microsoft Authenticator,
+    // etc.) plus one-time backup codes. Enabling requires the account password
+    // and a verified code, so a mis-scanned QR can't lock anyone out.
+    twoFactor({
+      issuer: "Authenticize",
+    }),
+
+    // WebAuthn passkeys (Face ID / Touch ID / security keys). rpID is the auth
+    // server's own hostname unless overridden; origin must be the exact origin
+    // the dashboard is served from — here that's the auth server itself.
+    passkey({
+      rpID: env.passkeyRpId ?? new URL(env.baseURL).hostname,
+      rpName: "Authenticize",
+      origin: env.baseURL,
+    }),
   ],
 
   ...(env.cookieDomain

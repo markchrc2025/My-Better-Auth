@@ -41,8 +41,13 @@ export function SettingsPage() {
             <Row label="Auth base path">
               <span className="code">{config.authBasePath}</span>
             </Row>
-            <Row label="Sign-up mode">
+            <Row label="Dashboard sign-up">
               {config.inviteOnly ? "Invite-only" : "Open"}
+            </Row>
+            <Row label="Social sign-up">
+              {config.socialAllowSignup
+                ? "Open-broker (self-provision)"
+                : "Invite-only (link only)"}
             </Row>
             <Row label="Cookie domain">
               {config.cookieDomain ? (
@@ -64,14 +69,24 @@ export function SettingsPage() {
             <h2 className="mb-2 text-sm font-semibold text-slate-200">
               Social sign-in providers
             </h2>
-            <Row label="GitHub">
-              <span className={config.socialProviders.github ? "badge-green" : "badge-gray"}>
-                {config.socialProviders.github ? "Enabled" : "Not configured"}
-              </span>
-            </Row>
             <Row label="Google">
               <span className={config.socialProviders.google ? "badge-green" : "badge-gray"}>
                 {config.socialProviders.google ? "Enabled" : "Not configured"}
+              </span>
+            </Row>
+            <Row label="Microsoft">
+              <span className={config.socialProviders.microsoft ? "badge-green" : "badge-gray"}>
+                {config.socialProviders.microsoft ? "Enabled" : "Not configured"}
+              </span>
+            </Row>
+            <Row label="Apple">
+              <span className={config.socialProviders.apple ? "badge-green" : "badge-gray"}>
+                {config.socialProviders.apple ? "Enabled" : "Not configured"}
+              </span>
+            </Row>
+            <Row label="GitHub">
+              <span className={config.socialProviders.github ? "badge-green" : "badge-gray"}>
+                {config.socialProviders.github ? "Enabled" : "Not configured"}
               </span>
             </Row>
             <p className="mt-3 text-xs text-muted">

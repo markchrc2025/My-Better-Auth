@@ -43,7 +43,13 @@ export interface PlatformConfig {
   cookieDomain: string | null;
   emailConfigured: boolean;
   emailProvider: string | null;
-  socialProviders: { github: boolean; google: boolean };
+  socialAllowSignup: boolean;
+  socialProviders: {
+    google: boolean;
+    microsoft: boolean;
+    apple: boolean;
+    github: boolean;
+  };
 }
 
 export interface OAuthApp {

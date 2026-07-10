@@ -6,6 +6,7 @@ const nav = [
   { to: "/", label: "Overview", end: true, icon: "◫" },
   { to: "/apps", label: "Applications", icon: "❖" },
   { to: "/users", label: "Users", icon: "◍" },
+  { to: "/security", label: "Security", icon: "🛡" },
   { to: "/settings", label: "Settings", icon: "⚙" },
 ];
 

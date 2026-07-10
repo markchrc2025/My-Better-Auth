@@ -67,8 +67,28 @@ served from the root path — locked to accounts in `ADMIN_EMAILS`. From it you 
   PKCE). Edit redirect URIs, disable, delete, or rotate the secret later.
 - **Users** — create users (the "invite"), search, set roles, ban/unban, reset
   passwords, and list/revoke sessions.
+- **Security** — turn on two-factor and register passkeys for your own account
+  (see below).
 - **Settings** — read-only view of issuer, sign-up mode, cookie domain, and which
   social providers are active.
+
+## Account security: two-factor & passkeys
+
+Every account can harden its own sign-in from the dashboard's **Security** page:
+
+- **Two-factor (TOTP)** — scan a QR with any authenticator app (Google
+  Authenticator, Microsoft Authenticator, 1Password, …) and confirm a code.
+  Enabling requires your password *and* a valid code, so a mis-scanned QR can't
+  lock you out, and one-time **backup codes** are shown once for recovery. After
+  it's on, password sign-in asks for the 6-digit code (or a backup code).
+- **Passkeys** — register a device passkey (Face ID, Touch ID, Windows Hello, a
+  security key). The login page then offers **Sign in with a passkey**, so you
+  can skip the password entirely.
+
+Passkeys are bound to a domain (the "relying party id"). By default that's the
+auth server's own hostname, derived from `BETTER_AUTH_URL`; set `PASSKEY_RP_ID`
+to a parent domain (e.g. `example.com`) to share passkeys across its subdomains.
+Passkeys require a secure context — they work on `localhost` and over HTTPS.
 
 ## Local development
 
@@ -298,6 +318,7 @@ set up. With it configured:
 | `APPLE_APP_BUNDLE_IDENTIFIER` | optional | Native app bundle id (id_token audience) |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | – | Enable GitHub sign-in |
 | `SOCIAL_ALLOW_SIGNUP` | – | `true` = open-broker (any social identity self-provisions a non-admin account); default `false` (invite-only linking) |
+| `PASSKEY_RP_ID` | optional | WebAuthn relying-party id; defaults to the auth server's hostname. Set a parent domain to share passkeys across subdomains |
 
 ## Operations
 
