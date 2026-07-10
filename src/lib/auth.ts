@@ -1,5 +1,6 @@
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
+import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { admin, jwt } from "better-auth/plugins";
 import { pool } from "../db.js";
 import { sendEmail } from "../email/index.js";
@@ -129,6 +130,29 @@ export const auth = betterAuth({
         },
       }
     : {}),
+
+  hooks: {
+    // Platform operators (dashboard admins) manage Authenticize itself — they
+    // are NOT application identities. Refuse to issue an authorization code for
+    // an operator session to any connected app, so an operator can never sign
+    // into an app just because they happen to be logged into the dashboard.
+    //
+    // We skip this when the client asked to force re-authentication
+    // (prompt=login): that flow sends the user to the login page to switch to
+    // an application account, and the operator check runs again on the
+    // continuation request (where the login prompt has been consumed).
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/oauth2/authorize") return;
+      const url = ctx.request ? new URL(ctx.request.url) : undefined;
+      const prompt = url?.searchParams.get("prompt") ?? "";
+      if (prompt.split(/[\s+]+/).includes("login")) return;
+
+      const session = await getSessionFromCtx(ctx);
+      if (session && isAdminUser(session.user)) {
+        throw ctx.redirect(`${env.baseURL}/login?error=management_account`);
+      }
+    }),
+  },
 
   telemetry: {
     enabled: false,

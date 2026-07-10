@@ -12,6 +12,12 @@ const HINTS: Record<string, string> = {
   invalid_client:
     "Unknown or disabled client_id — check the application's credentials and enabled state.",
   client_disabled: "This application is disabled. Enable it on its detail page.",
+  management_account:
+    "This is a platform management account — it administers Authenticize and cannot sign into connected applications. Sign in with an application account instead.",
+};
+
+const TITLES: Record<string, string> = {
+  management_account: "Management accounts can't sign into apps",
 };
 
 export function OAuthErrorNotice() {
@@ -26,7 +32,12 @@ export function OAuthErrorNotice() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-red-200">
-            An app's sign-in request was rejected: <span className="code">{error}</span>
+            {TITLES[error] ?? (
+              <>
+                An app's sign-in request was rejected:{" "}
+                <span className="code">{error}</span>
+              </>
+            )}
           </div>
           {description && (
             <p className="mt-1 text-sm text-red-300/90">{description}</p>
