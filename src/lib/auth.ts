@@ -89,6 +89,12 @@ export const auth = betterAuth({
       jwks: {
         keyPairConfig: { alg: "RS256" },
       },
+      jwt: {
+        // OIDC issuer identifier: the clean public origin. Without this the
+        // provider defaults to baseURL + basePath (…/api/auth), which breaks
+        // RP issuer validation against the root discovery document.
+        issuer: env.baseURL,
+      },
     }),
 
     // Turns this server into an OAuth 2.1 / OIDC provider. Client secrets
