@@ -1,6 +1,6 @@
 import { env } from "../env.js";
 
-const APP_NAME = "My Better Auth";
+const APP_NAME = "Authenticize";
 
 function layout(title: string, bodyHtml: string): string {
   return `<!doctype html>

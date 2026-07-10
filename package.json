@@ -1,7 +1,7 @@
 {
-  "name": "my-better-auth",
+  "name": "authenticize",
   "version": "1.0.0",
-  "description": "Standalone Better Auth server — central authentication service for all my apps",
+  "description": "Authenticize — personal authentication platform (OIDC provider + admin dashboard) built on Better Auth",
   "private": true,
   "type": "module",
   "engines": {

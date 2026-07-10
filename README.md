@@ -1,6 +1,6 @@
-# My Better Auth
+# Authenticize
 
-A personal **authentication platform**: a standalone [Better Auth](https://better-auth.com) server that acts as a full **OAuth 2.1 / OIDC provider** for all of your apps — each app connects with generated `client_id`/`client_secret` credentials, like your own private Auth0. Invite-only (public sign-up is disabled; accounts are created by an admin), built with [Hono](https://hono.dev) + PostgreSQL, packaged as a small Docker image, and designed to deploy on [Sliplane](https://sliplane.io) in a few clicks.
+A personal **authentication platform** built on [Better Auth](https://better-auth.com): a standalone server that acts as a full **OAuth 2.1 / OIDC provider** for all of your apps — each app connects with generated `client_id`/`client_secret` credentials, like your own private Auth0. Invite-only (public sign-up is disabled; accounts are created by an admin), built with [Hono](https://hono.dev) + PostgreSQL, packaged as a small Docker image, and designed to deploy on [Sliplane](https://sliplane.io) in a few clicks.
 
 ```
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
@@ -119,7 +119,7 @@ Sign in at [sliplane.io](https://sliplane.io) (GitHub login), create a **Project
 
 ### 3. Deploy this repo (public service)
 
-1. **Create Service** → **Deploy from GitHub** → select `markchrc2025/My-Better-Auth`, branch `main`, context directory `/`. Sliplane detects the `Dockerfile` automatically and picks up the exposed port (3000).
+1. **Create Service** → **Deploy from GitHub** → select `markchrc2025/Authenticize`, branch `main`, context directory `/`. Sliplane detects the `Dockerfile` automatically and picks up the exposed port (3000).
 2. Environment variables:
 
    | Variable | Value |
@@ -160,7 +160,7 @@ Each app connects as a standard **OIDC client**. You don't hand-edit anything on
 the server — you register the app in the dashboard and paste the generated values.
 
 1. In the dashboard → **Applications** → **Connect an app**. Give it a name, add
-   its redirect URI (e.g. `https://app.example.com/api/auth/callback/my-better-auth`),
+   its redirect URI (e.g. `https://app.example.com/api/auth/callback/authenticize`),
    and pick a type:
    - **Web app** (has a backend) → gets a `client_id` **and** `client_secret`.
    - **SPA / Native** → public client, `client_id` only (PKCE, no secret).
@@ -180,8 +180,8 @@ import NextAuth from "next-auth";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     {
-      id: "my-better-auth",
-      name: "My Better Auth",
+      id: "authenticize",
+      name: "Authenticize",
       type: "oidc",
       issuer: "https://auth.example.com",
       clientId: process.env.OIDC_CLIENT_ID!,
@@ -242,7 +242,7 @@ set up. With it configured:
 | `TRUSTED_ORIGINS` | optional | Extra allowed origins (CORS + trustedOrigins). Connected apps' redirect-URI origins are trusted automatically. |
 | `COOKIE_DOMAIN` | optional | e.g. `.example.com` — share the browser session cookie across subdomains (not needed for OIDC) |
 | `EMAIL_PROVIDER` | for email | `resend` or `smtp` (empty = email features off) |
-| `EMAIL_FROM` | for email | Sender, e.g. `My Better Auth <auth@yourdomain.com>` |
+| `EMAIL_FROM` | for email | Sender, e.g. `Authenticize <auth@yourdomain.com>` |
 | `RESEND_API_KEY` | provider=resend | Resend API key |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_SECURE` | provider=smtp | SMTP relay (Amazon SES, Gmail, ...) |
 | `AUTO_MIGRATE` | – | `false` to skip schema migration on boot (default `true`) |

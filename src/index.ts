@@ -81,7 +81,7 @@ async function main() {
   const server = serve(
     { fetch: app.fetch, port: env.port, hostname: "0.0.0.0" },
     (info) => {
-      console.log(`My Better Auth listening on http://${info.address}:${info.port}`);
+      console.log(`Authenticize listening on http://${info.address}:${info.port}`);
       console.log(`Issuer: ${env.baseURL}`);
     },
   );

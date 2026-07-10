@@ -23,7 +23,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-panel p-4 sm:flex">
         <div className="mb-6 flex items-center gap-2 px-2">
           <span className="text-xl">🔐</span>
-          <span className="font-semibold text-slate-100">My Better Auth</span>
+          <span className="font-semibold text-slate-100">Authenticize</span>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {nav.map((item) => (
@@ -56,7 +56,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border bg-panel/60 px-6 py-3 sm:hidden">
-          <span className="font-semibold">🔐 My Better Auth</span>
+          <span className="font-semibold">🔐 Authenticize</span>
           <button className="btn-ghost px-2" onClick={logout}>
             Sign out
           </button>

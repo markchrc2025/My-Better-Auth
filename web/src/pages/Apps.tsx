@@ -190,7 +190,7 @@ function CreateAppModal({
             className="input min-h-[72px] font-mono text-xs"
             value={redirects}
             onChange={(e) => setRedirects(e.target.value)}
-            placeholder={"https://app.example.com/api/auth/callback/my-better-auth"}
+            placeholder={"https://app.example.com/api/auth/callback/authenticize"}
             required
           />
           <p className="hint">One per line. Must be the full URL including path.</p>

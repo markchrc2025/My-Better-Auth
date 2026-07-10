@@ -64,8 +64,8 @@ import NextAuth from "next-auth";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     {
-      id: "my-better-auth",
-      name: "My Better Auth",
+      id: "authenticize",
+      name: "Authenticize",
       type: "oidc",
       issuer: "${c.issuer}",
       clientId: process.env.OIDC_CLIENT_ID!,

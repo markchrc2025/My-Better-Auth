@@ -52,7 +52,7 @@ export function ResetPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="text-3xl">🔐</div>
-          <h1 className="mt-2 text-xl font-semibold text-slate-100">My Better Auth</h1>
+          <h1 className="mt-2 text-xl font-semibold text-slate-100">Authenticize</h1>
           <p className="mt-1 text-sm text-muted">{title}</p>
         </div>
 

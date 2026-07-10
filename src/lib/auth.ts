@@ -20,7 +20,7 @@ export function isAdminUser(
 }
 
 export const auth = betterAuth({
-  appName: "My Better Auth",
+  appName: "Authenticize",
   baseURL: env.baseURL,
   secret: env.secret,
   database: pool,
