@@ -63,6 +63,7 @@ adminApi.get("/config", (c) =>
     socialProviders: {
       google: Boolean(env.google.clientId && env.google.clientSecret),
       microsoft: Boolean(env.microsoft.clientId && env.microsoft.clientSecret),
+      apple: Boolean(env.apple.clientId && env.apple.clientSecret),
       github: Boolean(env.github.clientId && env.github.clientSecret),
     },
   }),

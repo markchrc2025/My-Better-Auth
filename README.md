@@ -145,9 +145,9 @@ A stable custom domain keeps your OIDC issuer URL constant (apps pin it), and gi
 1. In the service **Settings → Domain → Connect Domain**, add `auth.example.com` and create the CNAME record it shows you. SSL is provisioned automatically via Let's Encrypt.
 2. Update `BETTER_AUTH_URL=https://auth.example.com` and redeploy. (Since apps connect over OIDC, they work across any domain — no shared-cookie configuration needed. If you *also* want browser-cookie SSO across subdomains of one root domain, additionally set `COOKIE_DOMAIN=.example.com`.)
 
-### 5. Configure social sign-in (Google / Microsoft / GitHub)
+### 5. Configure social sign-in (Google / Microsoft / Apple / GitHub)
 
-Authenticize can broker Google, Microsoft, and GitHub. When a provider is
+Authenticize can broker Google, Microsoft, Apple, and GitHub. When a provider is
 configured, a **"Continue with …"** button appears on the login page — both for
 signing into the dashboard and for apps signing in through the OIDC flow
 (Authenticize proves the identity; each app still authorizes from its own
@@ -160,19 +160,43 @@ tables). Create an OAuth app with each provider and set its callback URL to
   optional `MICROSOFT_TENANT_ID` (callback `…/api/auth/callback/microsoft`).
   Leave the tenant empty for `common` (work/school + personal accounts) or set a
   tenant GUID to restrict to your organization.
+- **Apple** → `APPLE_CLIENT_ID` (your **Services ID**) / `APPLE_CLIENT_SECRET`
+  (callback `…/api/auth/callback/apple`). Apple's secret is a short-lived ES256
+  JWT, not a static string — generate it from your `.p8` key with
+  **`npm run apple:secret`** (see below) and regenerate before it expires
+  (≤ 6 months). Apple posts its callback back as a form (`form_post`); this works
+  out of the box because state is stored server-side. Note: users who pick
+  "Hide My Email" arrive with a private relay address, so in invite-only mode
+  they'll only match an invite made to that relay address.
 - **GitHub** → `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
   (callback `…/api/auth/callback/github`)
 
 A provider activates automatically when both its id and secret are present.
 
-**Invite-only by default.** A social sign-in *links* to an account that was
-already invited with that email — it does **not** create a new account. An
-uninvited Google/Microsoft user is turned away with "this account isn't invited
-yet." To run Authenticize as an open identity broker instead (any
-Google/Microsoft/GitHub identity self-provisions a plain, non-admin app account
-on first sign-in), set `SOCIAL_ALLOW_SIGNUP=true`. Either way, management
-accounts can never sign into a connected app, and each app authorizes its own
-users from its own database.
+**Generating the Apple client secret:**
+
+```bash
+APPLE_TEAM_ID=ABCDE12345 \
+APPLE_KEY_ID=KEY1234567 \
+APPLE_CLIENT_ID=com.yourcompany.auth \        # your Services ID
+APPLE_PRIVATE_KEY_PATH=./AuthKey_KEY1234567.p8 \
+npm run apple:secret                          # prints the JWT → set as APPLE_CLIENT_SECRET
+```
+
+**Invite-only vs. open-broker.** Two modes, one env var:
+
+- **Invite-only** (default): a social sign-in *links* to an account that was
+  already invited with that email — it does **not** create a new one. An
+  uninvited user is turned away with "this account isn't invited yet."
+- **Open-broker** (`SOCIAL_ALLOW_SIGNUP=true`): any Google/Microsoft/Apple/GitHub
+  identity self-provisions a plain, **non-admin** account on first sign-in.
+  Authenticize acts as a pure identity broker and each connected app does the
+  real gatekeeping from its own tables. This is the mode to use when apps bring
+  their own user directories.
+
+Either way, **management accounts can never sign into a connected app**, and the
+dashboard itself stays invite-only email/password (social self-sign-up never
+grants admin).
 
 ## Connecting your apps
 
@@ -270,8 +294,10 @@ set up. With it configured:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | – | Enable Google sign-in |
 | `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | – | Enable Microsoft (Entra/Azure AD) sign-in |
 | `MICROSOFT_TENANT_ID` | optional | Entra tenant GUID; empty = `common` (work/school + personal) |
+| `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` | – | Enable Apple sign-in. id = Services ID; secret = JWT from `npm run apple:secret` |
+| `APPLE_APP_BUNDLE_IDENTIFIER` | optional | Native app bundle id (id_token audience) |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | – | Enable GitHub sign-in |
-| `SOCIAL_ALLOW_SIGNUP` | – | `true` lets any social identity self-provision a non-admin account; default `false` (invite-only linking) |
+| `SOCIAL_ALLOW_SIGNUP` | – | `true` = open-broker (any social identity self-provisions a non-admin account); default `false` (invite-only linking) |
 
 ## Operations
 

@@ -6,17 +6,18 @@ import { env } from "../env.js";
  * configured. The string ids match Better Auth's provider ids and its
  * /api/auth/callback/{id} paths.
  */
-export type SocialProviderId = "google" | "microsoft" | "github";
+export type SocialProviderId = "google" | "microsoft" | "apple" | "github";
 
 const CONFIGURED: Record<SocialProviderId, boolean> = {
   google: Boolean(env.google.clientId && env.google.clientSecret),
   microsoft: Boolean(env.microsoft.clientId && env.microsoft.clientSecret),
+  apple: Boolean(env.apple.clientId && env.apple.clientSecret),
   github: Boolean(env.github.clientId && env.github.clientSecret),
 };
 
-/** Enabled provider ids in display order (Google, Microsoft, then GitHub). */
+/** Enabled provider ids in display order (Google, Microsoft, Apple, GitHub). */
 export const enabledSocialProviders: SocialProviderId[] = (
-  ["google", "microsoft", "github"] as const
+  ["google", "microsoft", "apple", "github"] as const
 ).filter((id) => CONFIGURED[id]);
 
 /**
@@ -43,6 +44,16 @@ export function buildSocialProviders() {
       clientId: env.microsoft.clientId,
       clientSecret: env.microsoft.clientSecret,
       ...(env.microsoft.tenantId ? { tenantId: env.microsoft.tenantId } : {}),
+      disableImplicitSignUp,
+    };
+  }
+  if (CONFIGURED.apple) {
+    providers.apple = {
+      clientId: env.apple.clientId,
+      clientSecret: env.apple.clientSecret,
+      ...(env.apple.appBundleIdentifier
+        ? { appBundleIdentifier: env.apple.appBundleIdentifier }
+        : {}),
       disableImplicitSignUp,
     };
   }

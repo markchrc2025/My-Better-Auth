@@ -76,6 +76,15 @@ export const env = {
     // your organization only.
     tenantId: process.env.MICROSOFT_TENANT_ID || undefined,
   },
+  apple: {
+    // Sign in with Apple. clientId is your Services ID; clientSecret is a
+    // short-lived ES256 JWT you generate from your .p8 key — build it with
+    // `npm run apple:secret` and regenerate before it expires (max 6 months).
+    clientId: process.env.APPLE_CLIENT_ID,
+    clientSecret: process.env.APPLE_CLIENT_SECRET,
+    // App bundle id (native apps); used as the id_token audience when present.
+    appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER || undefined,
+  },
 
   // Invite-only by default: a social login can LINK to an already-invited
   // account but cannot create a brand-new one. Set SOCIAL_ALLOW_SIGNUP=true to

@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "migrate": "tsx src/migrate.ts",
     "auth:generate": "better-auth generate --config src/lib/auth.ts",
-    "auth:migrate": "better-auth migrate --config src/lib/auth.ts"
+    "auth:migrate": "better-auth migrate --config src/lib/auth.ts",
+    "apple:secret": "node scripts/apple-client-secret.mjs"
   },
   "dependencies": {
     "@better-auth/oauth-provider": "^1.6.23",

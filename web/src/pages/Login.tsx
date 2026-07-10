@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { OAuthErrorNotice } from "../components/OAuthErrorNotice.tsx";
 import { authClient } from "../lib/auth-client.ts";
 
-type ProviderId = "google" | "microsoft" | "github";
+type ProviderId = "google" | "microsoft" | "apple" | "github";
 
 const PROVIDER_META: Record<ProviderId, { label: string; icon: ReactNode }> = {
   google: {
@@ -36,6 +36,14 @@ const PROVIDER_META: Record<ProviderId, { label: string; icon: ReactNode }> = {
         <path fill="#7FBA00" d="M9.5 0H18v8.5H9.5z" />
         <path fill="#00A4EF" d="M0 9.5h8.5V18H0z" />
         <path fill="#FFB900" d="M9.5 9.5H18V18H9.5z" />
+      </svg>
+    ),
+  },
+  apple: {
+    label: "Continue with Apple",
+    icon: (
+      <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true">
+        <path d="M11.18 8.46c-.02-1.7 1.39-2.52 1.45-2.56-.79-1.16-2.02-1.32-2.46-1.34-1.05-.11-2.04.61-2.57.61-.53 0-1.35-.6-2.22-.58-1.14.02-2.19.66-2.78 1.68-1.18 2.06-.3 5.1.85 6.77.56.82 1.23 1.73 2.11 1.7.85-.03 1.17-.55 2.19-.55 1.02 0 1.31.55 2.21.53.91-.02 1.49-.83 2.05-1.65.65-.95.91-1.87.93-1.92-.02-.01-1.78-.69-1.79-2.72ZM9.47 3.4c.47-.57.79-1.36.7-2.15-.68.03-1.5.45-1.98 1.02-.43.5-.81 1.31-.71 2.08.76.06 1.53-.39 1.99-.95Z" />
       </svg>
     ),
   },
