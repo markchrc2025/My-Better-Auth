@@ -57,6 +57,9 @@ export const env = {
     smtpSecure: (process.env.SMTP_SECURE ?? "").toLowerCase() === "true",
   },
 
+  // Social identity providers Authenticize can broker. A provider only turns
+  // on when BOTH its id and secret are set. Their callback URLs are
+  // <BETTER_AUTH_URL>/api/auth/callback/{github,google,microsoft}.
   github: {
     clientId: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
@@ -65,4 +68,19 @@ export const env = {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   },
+  microsoft: {
+    clientId: process.env.MICROSOFT_CLIENT_ID,
+    clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+    // Azure AD / Entra tenant. "common" (default) accepts both work/school and
+    // personal Microsoft accounts; set a specific tenant GUID to restrict to
+    // your organization only.
+    tenantId: process.env.MICROSOFT_TENANT_ID || undefined,
+  },
+
+  // Invite-only by default: a social login can LINK to an already-invited
+  // account but cannot create a brand-new one. Set SOCIAL_ALLOW_SIGNUP=true to
+  // let any Google/Microsoft/GitHub identity self-provision a plain (non-admin)
+  // app account on first sign-in.
+  socialAllowSignup:
+    (process.env.SOCIAL_ALLOW_SIGNUP ?? "").toLowerCase() === "true",
 };

@@ -7,6 +7,7 @@ import { sendEmail } from "../email/index.js";
 import { resetPasswordEmail, verificationEmail } from "../email/templates.js";
 import { env } from "../env.js";
 import { getRegisteredClientOrigins } from "./app-origins.js";
+import { buildSocialProviders, enabledSocialProviders } from "./social.js";
 
 /**
  * Platform administrators: users with the "admin" role, plus anyone listed in
@@ -52,23 +53,22 @@ export const auth = betterAuth({
     },
   },
 
-  socialProviders: {
-    ...(env.github.clientId && env.github.clientSecret
-      ? {
-          github: {
-            clientId: env.github.clientId,
-            clientSecret: env.github.clientSecret,
-          },
-        }
-      : {}),
-    ...(env.google.clientId && env.google.clientSecret
-      ? {
-          google: {
-            clientId: env.google.clientId,
-            clientSecret: env.google.clientSecret,
-          },
-        }
-      : {}),
+  // Google / Microsoft / GitHub brokering. Each provider is invite-only by
+  // default (see buildSocialProviders): a social sign-in links to an existing
+  // invited account but won't create a new one unless SOCIAL_ALLOW_SIGNUP=true.
+  socialProviders: buildSocialProviders(),
+
+  // Let a first-time social sign-in attach itself to the invited account that
+  // already owns that email. `requireLocalEmailVerified: false` is required
+  // because dashboard-invited accounts start unverified — without it, Better
+  // Auth refuses to link and the user hits "account not linked". Linking is
+  // still gated to the trusted providers we configured above.
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: enabledSocialProviders,
+      requireLocalEmailVerified: false,
+    },
   },
 
   databaseHooks: {

@@ -12,6 +12,7 @@ import { pool } from "./db.js";
 import { env } from "./env.js";
 import { getRegisteredClientOrigins } from "./lib/app-origins.js";
 import { auth } from "./lib/auth.js";
+import { enabledSocialProviders } from "./lib/social.js";
 import { runMigrationsWithRetry } from "./migrate.js";
 
 const app = new Hono();
@@ -43,6 +44,16 @@ const authServerConfig = oauthProviderAuthServerMetadata(auth);
 app.get("/.well-known/openid-configuration", (c) => openIdConfig(c.req.raw));
 app.get("/.well-known/oauth-authorization-server", (c) =>
   authServerConfig(c.req.raw),
+);
+
+// Public, unauthenticated UI config for the login page (which runs before any
+// session exists): tells it which social sign-in buttons to render. Contains
+// no secrets — only the list of enabled provider ids.
+app.get("/api/public-config", (c) =>
+  c.json({
+    appName: "Authenticize",
+    socialProviders: enabledSocialProviders,
+  }),
 );
 
 // Shallow health check — used by Sliplane to gate deploys and monitor the

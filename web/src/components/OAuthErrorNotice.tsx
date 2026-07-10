@@ -14,10 +14,18 @@ const HINTS: Record<string, string> = {
   client_disabled: "This application is disabled. Enable it on its detail page.",
   management_account:
     "This is a platform management account — it administers Authenticize and cannot sign into connected applications. Sign in with an application account instead.",
+  signup_disabled:
+    "That Google/Microsoft account hasn't been invited. Authenticize is invite-only: an administrator has to add your email here first, then this sign-in will link to it.",
+  account_not_linked:
+    "We found an account with that email but couldn't link this social login to it. Ask an administrator to check your account, or sign in with your email and password.",
+  email_not_found:
+    "The provider didn't share an email address, so we can't match you to an account. Try a different sign-in method.",
 };
 
 const TITLES: Record<string, string> = {
   management_account: "Management accounts can't sign into apps",
+  signup_disabled: "This account isn't invited yet",
+  account_not_linked: "Couldn't link this social login",
 };
 
 export function OAuthErrorNotice() {

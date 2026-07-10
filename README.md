@@ -37,7 +37,7 @@ credentials and copy-paste setup snippets — no terminal needed.
 | 3. Create a Better Auth instance | `src/lib/auth.ts` — exports `auth` |
 | 4. Configure database | `src/db.ts` — PostgreSQL `Pool` (built-in Kysely adapter) |
 | 5. Create database tables | Automatic on boot (`src/migrate.ts`), or `npm run migrate` / `npm run auth:migrate` |
-| 6. Authentication methods | Email & password enabled; GitHub/Google auto-enable when their env vars are set |
+| 6. Authentication methods | Email & password enabled; Google / Microsoft / GitHub sign-in auto-enable when their env vars are set |
 | 7. Mount handler | `src/index.ts` — Hono serves `/api/auth/*` (+ CORS + health checks) |
 | 8. Create client instance | Each app connects over **OIDC** with generated credentials — see [Connecting your apps](#connecting-your-apps) |
 
@@ -145,14 +145,34 @@ A stable custom domain keeps your OIDC issuer URL constant (apps pin it), and gi
 1. In the service **Settings → Domain → Connect Domain**, add `auth.example.com` and create the CNAME record it shows you. SSL is provisioned automatically via Let's Encrypt.
 2. Update `BETTER_AUTH_URL=https://auth.example.com` and redeploy. (Since apps connect over OIDC, they work across any domain — no shared-cookie configuration needed. If you *also* want browser-cookie SSO across subdomains of one root domain, additionally set `COOKIE_DOMAIN=.example.com`.)
 
-### 5. Configure social providers (optional)
+### 5. Configure social sign-in (Google / Microsoft / GitHub)
 
-Create OAuth apps and set the callback URL to `https://auth.example.com/api/auth/callback/<provider>`:
+Authenticize can broker Google, Microsoft, and GitHub. When a provider is
+configured, a **"Continue with …"** button appears on the login page — both for
+signing into the dashboard and for apps signing in through the OIDC flow
+(Authenticize proves the identity; each app still authorizes from its own
+tables). Create an OAuth app with each provider and set its callback URL to
+`https://auth.example.com/api/auth/callback/<provider>`:
 
-- GitHub → set `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
-- Google → set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+- **Google** → `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+  (callback `…/api/auth/callback/google`)
+- **Microsoft** (Entra / Azure AD) → `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`,
+  optional `MICROSOFT_TENANT_ID` (callback `…/api/auth/callback/microsoft`).
+  Leave the tenant empty for `common` (work/school + personal accounts) or set a
+  tenant GUID to restrict to your organization.
+- **GitHub** → `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+  (callback `…/api/auth/callback/github`)
 
-Providers activate automatically when both values are present. Add more in `src/lib/auth.ts`.
+A provider activates automatically when both its id and secret are present.
+
+**Invite-only by default.** A social sign-in *links* to an account that was
+already invited with that email — it does **not** create a new account. An
+uninvited Google/Microsoft user is turned away with "this account isn't invited
+yet." To run Authenticize as an open identity broker instead (any
+Google/Microsoft/GitHub identity self-provisions a plain, non-admin app account
+on first sign-in), set `SOCIAL_ALLOW_SIGNUP=true`. Either way, management
+accounts can never sign into a connected app, and each app authorizes its own
+users from its own database.
 
 ## Connecting your apps
 
@@ -247,8 +267,11 @@ set up. With it configured:
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_SECURE` | provider=smtp | SMTP relay (Amazon SES, Gmail, ...) |
 | `AUTO_MIGRATE` | – | `false` to skip schema migration on boot (default `true`) |
 | `PORT` | – | Listen port (default `3000`) |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | – | Enable GitHub sign-in |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | – | Enable Google sign-in |
+| `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | – | Enable Microsoft (Entra/Azure AD) sign-in |
+| `MICROSOFT_TENANT_ID` | optional | Entra tenant GUID; empty = `common` (work/school + personal) |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | – | Enable GitHub sign-in |
+| `SOCIAL_ALLOW_SIGNUP` | – | `true` lets any social identity self-provision a non-admin account; default `false` (invite-only linking) |
 
 ## Operations
 

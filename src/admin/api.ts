@@ -59,9 +59,11 @@ adminApi.get("/config", (c) =>
     cookieDomain: env.cookieDomain ?? null,
     emailConfigured: emailConfigured(),
     emailProvider: env.email.provider || null,
+    socialAllowSignup: env.socialAllowSignup,
     socialProviders: {
-      github: Boolean(env.github.clientId && env.github.clientSecret),
       google: Boolean(env.google.clientId && env.google.clientSecret),
+      microsoft: Boolean(env.microsoft.clientId && env.microsoft.clientSecret),
+      github: Boolean(env.github.clientId && env.github.clientSecret),
     },
   }),
 );
