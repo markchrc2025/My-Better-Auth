@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@better-auth/oauth-provider": "^1.6.23",
+    "@better-auth/passkey": "^1.6.23",
     "better-auth": "^1.6.23",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
