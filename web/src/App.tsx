@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout.tsx";
 import { Spinner, ToastProvider } from "./components/ui.tsx";
-import { useSession } from "./lib/auth-client.ts";
+import { authClient, useSession } from "./lib/auth-client.ts";
 import { AppDetailPage } from "./pages/AppDetail.tsx";
 import { AppsPage } from "./pages/Apps.tsx";
 import { ConsentPage } from "./pages/Consent.tsx";
@@ -55,8 +55,18 @@ function RequireAdmin({ children }: { children: ReactNode }) {
           <h1 className="text-lg font-semibold text-slate-100">Not authorized</h1>
           <p className="mt-2 text-sm text-muted">
             You are signed in as <span className="code">{session.user.email}</span>, but
-            this account does not have platform admin access.
+            this account does not have platform admin access. This dashboard is for
+            platform operators only.
           </p>
+          <button
+            className="btn-secondary mt-5"
+            onClick={async () => {
+              await authClient.signOut();
+              window.location.href = "/login";
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </CenteredMessage>
     );
