@@ -12,7 +12,7 @@ import {
   getRegisteredClientOrigins,
   redirectUriMatches,
 } from "./app-origins.js";
-import { effectiveAppMethods } from "./sign-in-methods.js";
+import { effectiveAppMethods, SOCIAL_PROVIDERS } from "./sign-in-methods.js";
 import { buildSocialProviders, enabledSocialProviders } from "./social.js";
 
 /** Pull the OAuth client_id out of a social login's callbackURL, if any. */
@@ -213,6 +213,29 @@ export const auth = betterAuth({
               redirectUri,
             )}`,
           );
+        }
+      }
+
+      // One-click provider brokering. A connecting app can add
+      // ?provider_hint=google (etc.) to its authorize request to jump straight
+      // to that provider instead of showing our sign-in page — this is how a
+      // downstream app's own "Continue with Google/Microsoft" buttons broker
+      // through us without holding any provider secrets. Better Auth strips
+      // unknown params from the signed login redirect, so we pass the hint to
+      // the login page out-of-band: set a short-lived, same-origin cookie the
+      // SPA reads, drop the param, and re-enter authorize so the normal signed
+      // login redirect (and stored OAuth state) is produced as usual.
+      if (url) {
+        const hint = url.searchParams.get("provider_hint");
+        if (hint && (SOCIAL_PROVIDERS as readonly string[]).includes(hint)) {
+          ctx.setCookie("az_provider_hint", hint, {
+            maxAge: 300,
+            path: "/",
+            sameSite: "lax",
+            httpOnly: false,
+          });
+          url.searchParams.delete("provider_hint");
+          throw ctx.redirect(url.toString());
         }
       }
 

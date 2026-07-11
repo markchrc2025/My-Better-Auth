@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { OAuthErrorNotice } from "../components/OAuthErrorNotice.tsx";
 import { Spinner } from "../components/ui.tsx";
 import { authClient } from "../lib/auth-client.ts";
@@ -59,6 +59,25 @@ const PROVIDER_META: Record<ProviderId, { label: string; icon: ReactNode }> = {
 };
 
 /**
+ * Read (and immediately clear) the one-click provider hint the auth server
+ * dropped as a short-lived cookie when a connecting app requested
+ * ?provider_hint=… on its authorize call. We use a cookie rather than a query
+ * param because Better Auth strips unknown params from the signed login
+ * redirect (see src/lib/auth.ts). Reading once, and clearing on read, means a
+ * stale hint can never silently re-trigger a redirect on a later visit.
+ */
+function takeProviderHint(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)az_provider_hint=([^;]+)/);
+  if (!match) return null;
+  document.cookie = "az_provider_hint=; path=/; max-age=0; samesite=lax";
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+/**
  * Doubles as the dashboard login and the OIDC provider's login page.
  *
  * When an app sends a user to /oauth2/authorize and there is no session, the
@@ -93,6 +112,16 @@ export function LoginPage() {
   const params = new URLSearchParams(search);
   const clientId = params.get("client_id");
   const isOidcFlow = params.has("client_id") && params.has("redirect_uri");
+
+  // A connecting app can request one-click brokering to a specific provider by
+  // passing ?provider_hint=google (etc.) on its authorize request. The auth
+  // server relays it to us as a cookie (read + cleared once, on mount). When
+  // that provider is enabled for the app we skip this page and bounce straight
+  // to the provider — used by tenant SSO in downstream apps so their "Continue
+  // with Google/Microsoft" buttons never surface Authenticize's own UI.
+  const [providerHint] = useState<string | null>(() => takeProviderHint());
+  const [autoRedirect, setAutoRedirect] = useState<ProviderId | null>(null);
+  const autoTriggered = useRef(false);
 
   // Where a successful/failed social round-trip lands. In an OIDC flow both
   // point back into the authorize request so the provider hand-off is
@@ -182,8 +211,24 @@ export function LoginPage() {
     if (error) {
       setError(error.message ?? `Could not start ${provider} sign-in`);
       setBusy(false);
+      // Fall back to the full sign-in page instead of a dead spinner.
+      setAutoRedirect(null);
     }
   };
+
+  // Auto-broker when an app asks for a specific provider via provider_hint and
+  // that provider is actually enabled for the app. Fires once, only inside an
+  // OIDC flow; otherwise this page renders normally.
+  useEffect(() => {
+    if (!methods || !isOidcFlow || autoTriggered.current) return;
+    const hint = providerHint as ProviderId | null;
+    if (hint && methods.social.includes(hint)) {
+      autoTriggered.current = true;
+      setAutoRedirect(hint);
+      void onSocial(hint);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [methods]);
 
   const onPasskey = async () => {
     setBusy(true);
@@ -266,6 +311,18 @@ export function LoginPage() {
                 {useBackup ? "Use your authenticator app instead" : "Use a backup code"}
               </button>
             </form>
+          </div>
+        ) : autoRedirect && !error ? (
+          <div className="card p-6">
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Spinner />
+              <p className="text-sm text-muted">
+                Continuing with{" "}
+                {PROVIDER_META[autoRedirect]?.label.replace(/^Continue with /, "") ??
+                  autoRedirect}
+                …
+              </p>
+            </div>
           </div>
         ) : (
           <div className="card space-y-4 p-6">

@@ -230,6 +230,18 @@ server-side even for a hand-crafted request. A new app offers everything
 available until you narrow it, and only providers configured platform-wide can be
 turned on. The dashboard login (no app) always offers every available method.
 
+### One-click provider brokering (`provider_hint`)
+
+An app that wants its *own* "Continue with Google/Microsoft" buttons — rather
+than a single "Continue with Authenticize" button — can add
+`?provider_hint=<provider>` to its `/oauth2/authorize` request. Authenticize
+then skips its own sign-in page and bounces straight to that provider, so the
+brokering is invisible to the app's users. The hint is honoured only when the
+provider is enabled for that app; otherwise the normal login page is shown. The
+app still holds no provider secrets, and Authenticize still just proves the
+identity — the app authorizes the resulting email from its own tables. (Sentire
+Payroll's tenant login uses this for its three SSO buttons.)
+
 ## Connecting your apps
 
 Each app connects as a standard **OIDC client**. You don't hand-edit anything on

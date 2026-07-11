@@ -19,7 +19,9 @@ export const SIGN_IN_METHODS = [
 ] as const;
 export type SignInMethod = (typeof SIGN_IN_METHODS)[number];
 
-const SOCIAL = new Set(["google", "microsoft", "apple", "github"]);
+/** The social provider ids the platform can broker (everything but email/passkey). */
+export const SOCIAL_PROVIDERS = ["google", "microsoft", "apple", "github"] as const;
+const SOCIAL = new Set<string>(SOCIAL_PROVIDERS);
 
 /**
  * Methods the platform can offer at all right now: email + passkey are always
