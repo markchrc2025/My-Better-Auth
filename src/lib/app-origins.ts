@@ -57,3 +57,47 @@ export async function getRegisteredClientOrigins(): Promise<string[]> {
 export function invalidateClientOriginsCache(): void {
   cache = { at: 0, origins: cache.origins };
 }
+
+/** Redirect URIs registered for a single client, or [] if it doesn't exist. */
+export async function getClientRedirectUris(clientId: string): Promise<string[]> {
+  try {
+    const res = await pool.query(
+      `SELECT "redirectUris" FROM "oauthClient" WHERE "clientId" = $1`,
+      [clientId],
+    );
+    if (res.rowCount === 0) return [];
+    return parseStringArray(res.rows[0].redirectUris);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Does a requested redirect_uri match one of the registered ones, using the
+ * same rule the OAuth provider enforces: exact string match, except loopback
+ * addresses (localhost/127.0.0.1) may differ only in port (RFC 8252).
+ */
+export function redirectUriMatches(
+  registered: string[],
+  requested: string,
+): boolean {
+  return registered.some((reg) => {
+    if (reg === requested) return true;
+    try {
+      const r = new URL(reg);
+      const q = new URL(requested);
+      const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(
+        r.hostname,
+      );
+      return (
+        loopback &&
+        r.hostname === q.hostname &&
+        r.pathname === q.pathname &&
+        r.protocol === q.protocol &&
+        r.search === q.search
+      );
+    } catch {
+      return false;
+    }
+  });
+}

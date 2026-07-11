@@ -7,7 +7,11 @@ import { pool } from "../db.js";
 import { sendEmail } from "../email/index.js";
 import { resetPasswordEmail, verificationEmail } from "../email/templates.js";
 import { env } from "../env.js";
-import { getRegisteredClientOrigins } from "./app-origins.js";
+import {
+  getClientRedirectUris,
+  getRegisteredClientOrigins,
+  redirectUriMatches,
+} from "./app-origins.js";
 import { effectiveAppMethods } from "./sign-in-methods.js";
 import { buildSocialProviders, enabledSocialProviders } from "./social.js";
 
@@ -192,6 +196,26 @@ export const auth = betterAuth({
 
       if (ctx.path !== "/oauth2/authorize") return;
       const url = ctx.request ? new URL(ctx.request.url) : undefined;
+
+      // Helpful invalid_redirect: when a known app sends a redirect_uri that
+      // isn't registered, bounce to the login page WITH the attempted URI so
+      // the admin can copy-paste the exact value into the app's Redirect URIs,
+      // instead of the provider's opaque "invalid redirect uri". We only act
+      // when the client exists and the URI genuinely doesn't match (same rule
+      // the provider uses), so a valid request is never intercepted.
+      const clientId = url?.searchParams.get("client_id") ?? undefined;
+      const redirectUri = url?.searchParams.get("redirect_uri") ?? undefined;
+      if (clientId && redirectUri) {
+        const registered = await getClientRedirectUris(clientId);
+        if (registered.length > 0 && !redirectUriMatches(registered, redirectUri)) {
+          throw ctx.redirect(
+            `${env.baseURL}/login?error=invalid_redirect&attempted=${encodeURIComponent(
+              redirectUri,
+            )}`,
+          );
+        }
+      }
+
       const prompt = url?.searchParams.get("prompt") ?? "";
       if (prompt.split(/[\s+]+/).includes("login")) return;
 
