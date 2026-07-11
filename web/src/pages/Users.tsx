@@ -52,10 +52,10 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Users"
-        description={`${total} account${total === 1 ? "" : "s"}. New users are created here (invite-only).`}
+        description={`${total} account${total === 1 ? "" : "s"} — platform operators, plus identities that have signed in through your apps.`}
         action={
           <button className="btn-primary" onClick={() => setShowCreate(true)}>
-            Create user
+            Create operator
           </button>
         }
       />
@@ -87,36 +87,76 @@ export function UsersPage() {
       ) : list.length === 0 ? (
         <div className="card p-10 text-center text-sm text-muted">No users found.</div>
       ) : (
-        <div className="card divide-y divide-border">
-          {list.map((u) => (
-            <button
-              key={u.id}
-              onClick={() => setManaging(u)}
-              className="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition-colors hover:bg-elevated"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium text-slate-100">{u.email}</span>
-                  {u.role === "admin" && <span className="badge-green">admin</span>}
-                  {u.banned && <span className="badge-red">banned</span>}
+        <div className="space-y-6">
+          {(() => {
+            const operators = list.filter((u) => u.role === "admin");
+            const identities = list.filter((u) => u.role !== "admin");
+            const row = (u: PlatformUser) => (
+              <button
+                key={u.id}
+                onClick={() => setManaging(u)}
+                className="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition-colors hover:bg-elevated"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium text-slate-100">{u.email}</span>
+                    {u.role === "admin" && <span className="badge-green">operator</span>}
+                    {u.banned && <span className="badge-red">banned</span>}
+                  </div>
+                  <div className="mt-0.5 truncate text-xs text-muted">{u.name}</div>
                 </div>
-                <div className="mt-0.5 truncate text-xs text-muted">{u.name}</div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {(authMethods[u.id] ?? []).map((m) => (
-                  <span key={m} className="badge-gray" title="How this identity signs in to Authenticize">
-                    {METHOD_LABELS[m] ?? m}
-                  </span>
-                ))}
-                {(authMethods[u.id] ?? []).length === 0 && (
-                  <span className="badge-gray" title="No sign-in method registered yet">
-                    no method
-                  </span>
-                )}
-                <span className="text-muted">›</span>
-              </div>
-            </button>
-          ))}
+                <div className="flex shrink-0 items-center gap-2">
+                  {(authMethods[u.id] ?? []).map((m) => (
+                    <span key={m} className="badge-gray" title="How this identity signs in to Authenticize">
+                      {METHOD_LABELS[m] ?? m}
+                    </span>
+                  ))}
+                  {(authMethods[u.id] ?? []).length === 0 && (
+                    <span className="badge-gray" title="No sign-in method registered yet">
+                      no method
+                    </span>
+                  )}
+                  <span className="text-muted">›</span>
+                </div>
+              </button>
+            );
+            return (
+              <>
+                <section>
+                  <h2 className="mb-1 text-sm font-semibold text-slate-200">
+                    Platform operators{" "}
+                    <span className="font-normal text-muted">· {operators.length}</span>
+                  </h2>
+                  <p className="mb-2 text-xs text-muted">
+                    Administer Authenticize and open this dashboard.
+                  </p>
+                  {operators.length > 0 ? (
+                    <div className="card divide-y divide-border">{operators.map(row)}</div>
+                  ) : (
+                    <div className="card p-4 text-sm text-muted">No operators.</div>
+                  )}
+                </section>
+                <section>
+                  <h2 className="mb-1 text-sm font-semibold text-slate-200">
+                    App identities{" "}
+                    <span className="font-normal text-muted">· {identities.length}</span>
+                  </h2>
+                  <p className="mb-2 text-xs text-muted">
+                    People who signed in through a connected app. Each app authorizes
+                    them from its <em>own</em> user list — they are not platform members
+                    and can't open this dashboard.
+                  </p>
+                  {identities.length > 0 ? (
+                    <div className="card divide-y divide-border">{identities.map(row)}</div>
+                  ) : (
+                    <div className="card p-4 text-sm text-muted">
+                      No app identities yet.
+                    </div>
+                  )}
+                </section>
+              </>
+            );
+          })()}
         </div>
       )}
 
